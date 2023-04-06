@@ -1,0 +1,19 @@
+[package]
+name = "mut_family"
+version = "0.1.0"
+authors = ["Dmitrii Demenev <demenev.dmitriy1@gmail.com>"]
+edition = "2021"
+rust-version = "1.65.0" # https://github.com/foresterre/cargo-msrv/issues/244
+description = "A GAT-based library for writing code that is generic over exterior/interior mutability."
+documentation = "https://docs.rs/mut_family"
+readme = "README.md"
+repository = "https://github.com/JohnScience/mut_family"
+license = "MIT OR Apache-2.0"
+# license-file | not needed
+keywords = ["interior", "mutability", "generic"]
+categories = ["no-std", "no-std::no-alloc", "rust-patterns"] # https://crates.io/category_slugs
+
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
