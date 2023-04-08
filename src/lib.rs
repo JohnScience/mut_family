@@ -53,7 +53,7 @@ pub trait MutFamily {
     type Target<T>;
     /// The generic associated type (GAT) that allows to constuct types of references
     /// (e.g. `&'a Cell<T>` or `&'a mut T`) that allow mutation of the wrapped value.
-    type RefAllowingMutation<'a, T>: sealed::ArbMutRef<'a, Self::Target<T>>
+    type RefAllowingMutationUnsafely<'a, T>: sealed::ArbMutRef<'a, Self::Target<T>>
     where
         T: 'a,
         Self::Target<T>: 'a;
@@ -66,7 +66,7 @@ pub trait MutFamily {
     fn get_mut<'a, T>(mut_ref: &'a mut Self::Target<T>) -> &'a mut T;
     /// Returns a mutable raw pointer to the wrapped value. Check the safety requirements of the
     /// implementors.
-    fn as_ptr<'a, T>(ref_: Self::RefAllowingMutation<'a,T>) -> *mut T;
+    fn as_ptr<'a, T>(ref_: Self::RefAllowingMutationUnsafely<'a,T>) -> *mut T;
 }
 
 /// The trait whose implementors represent various interior mutability wrappers that allow
@@ -98,9 +98,17 @@ pub trait CloneInner: CloneCopyableInner
         T: Clone;
 }
 
+pub trait Set: MutFamily {
+    type RefAllowingMutation<'a,T>: sealed::ArbMutRef<'a, Self::Target<T>>
+    where
+        T: 'a,
+        Self::Target<T>: 'a;
+    fn set<'a, T>(ref_: Self::RefAllowingMutation<'a,T>, value: T);
+}
+
 impl MutFamily for IdentityFamily {
     type Target<T> = T;
-    type RefAllowingMutation<'a, T> = &'a mut T
+    type RefAllowingMutationUnsafely<'a, T> = &'a mut T
     where
         T: 'a;
     
@@ -124,7 +132,7 @@ impl MutFamily for IdentityFamily {
 impl MutFamily for UnsafeCellFamily {
     type Target<T> = core::cell::UnsafeCell<T>;
     
-    type RefAllowingMutation<'a, T> = &'a core::cell::UnsafeCell<T>
+    type RefAllowingMutationUnsafely<'a, T> = &'a core::cell::UnsafeCell<T>
     where
         T: 'a;
 
@@ -147,7 +155,7 @@ impl MutFamily for UnsafeCellFamily {
 
 impl MutFamily for CellFamily {
     type Target<T> = core::cell::Cell<T>;
-    type RefAllowingMutation<'a, T> = &'a core::cell::Cell<T>
+    type RefAllowingMutationUnsafely<'a, T> = &'a core::cell::Cell<T>
     where
         T: 'a;
 
@@ -170,7 +178,7 @@ impl MutFamily for CellFamily {
 
 impl MutFamily for RefCellFamily {
     type Target<T> = core::cell::RefCell<T>;
-    type RefAllowingMutation<'a, T> = &'a core::cell::RefCell<T>
+    type RefAllowingMutationUnsafely<'a, T> = &'a core::cell::RefCell<T>
     where
         T: 'a;
 
@@ -233,5 +241,38 @@ impl CloneInner for RefCellFamily {
         T: Clone,
     {
         ref_.borrow().clone()
+    }
+}
+
+impl Set for IdentityFamily {
+    type RefAllowingMutation<'a,T> = &'a mut T
+    where
+        T: 'a,
+        Self::Target<T>: 'a;
+    
+    fn set<'a, T>(ref_: &'a mut T, value: T) {
+        *ref_ = value;
+    }
+}
+
+impl Set for CellFamily {
+    type RefAllowingMutation<'a,T> = &'a core::cell::Cell<T>
+    where
+        T: 'a,
+        Self::Target<T>: 'a;
+    
+    fn set<'a, T>(ref_: &'a core::cell::Cell<T>, value: T) {
+        ref_.set(value);
+    }
+}
+
+impl Set for RefCellFamily {
+    type RefAllowingMutation<'a,T> = &'a core::cell::RefCell<T>
+    where
+        T: 'a,
+        Self::Target<T>: 'a;
+    
+    fn set<'a, T>(ref_: &'a core::cell::RefCell<T>, value: T) {
+        *ref_.borrow_mut() = value;
     }
 }
