@@ -40,6 +40,10 @@ where
     type Pointee;
     /// The type that represents the mutability of the reference.
     type RefMutFamily;
+
+    /// The method that returns a concrete shared reference. This is method is needed
+    /// in generic context.
+    fn as_ref(&self) -> &T;
 }
 
 impl<'a, T, M> Ref<'a, T, M> for &'a T
@@ -48,6 +52,10 @@ where
 {
     type Pointee = T;
     type RefMutFamily = M;
+
+    fn as_ref(&self) -> &T {
+        self
+    }
 }
 
 impl<'a, T, M> Ref<'a, T, M> for &'a mut T
@@ -56,4 +64,8 @@ where
 {
     type Pointee = T;
     type RefMutFamily = M;
+
+    fn as_ref(&self) -> &T {
+        self
+    }
 }
