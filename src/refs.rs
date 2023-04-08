@@ -5,7 +5,8 @@ pub struct SharedRefFamily;
 /// The type that represents mutable references as opposed to shared references.
 pub struct MutRefFamily;
 
-/// The trait whose implementors represent various reference types.
+/// The trait whose two implementors represent either mutability ([`MutRefFamily`])
+/// or sharedness ([`SharedRefFamily`]) of references.
 #[sealed]
 pub trait RefMutFamily: Sized {
     /// The generic associated type ([GAT]) that allows to constuct types of references
@@ -30,7 +31,7 @@ impl RefMutFamily for MutRefFamily {
         T: 'a;
 }
 
-/// The trait whose implementors represent various reference types.
+/// The trait whose implementors represent any of the two reference types.
 pub trait Ref<'a, T, M>
 where
     M: RefMutFamily,
