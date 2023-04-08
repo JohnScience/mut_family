@@ -1,6 +1,6 @@
 use sealed::sealed;
 
-/// The type that represents mutable references as opposed to shared references.
+/// The type that represents shared references as opposed to mutable references.
 pub struct SharedRefFamily;
 /// The type that represents mutable references as opposed to shared references.
 pub struct MutRefFamily;
@@ -9,9 +9,9 @@ pub struct MutRefFamily;
 #[sealed]
 pub trait RefMutFamily: Sized {
     /// The generic associated type ([GAT]) that allows to constuct types of references
-    /// 
+    ///
     /// [GAT]: https://blog.rust-lang.org/2022/10/28/gats-stabilization.html#what-are-gats
-    type Target<'a, T>: Ref<'a, T, Self, Pointee = T, RefMutFamily = Self> 
+    type Target<'a, T>: Ref<'a, T, Self, Pointee = T, RefMutFamily = Self>
     where
         T: 'a;
 }
@@ -28,23 +28,6 @@ impl RefMutFamily for MutRefFamily {
     type Target<'a,T> = &'a mut T
     where
         T: 'a;
-}
-
-/// The trait whose implementors represent various reference types of arbitrary mutability.
-#[sealed]
-pub trait ArbMutRef<'a, T> {
-    /// The type that represents the mutability of the reference.
-    type RefMutFamily: RefMutFamily;
-}
-
-#[sealed]
-impl<'a, T> ArbMutRef<'a, T> for &'a T {
-    type RefMutFamily = SharedRefFamily;
-}
-
-#[sealed]
-impl<'a, T> ArbMutRef<'a, T> for &'a mut T {
-    type RefMutFamily = MutRefFamily;
 }
 
 /// The trait whose implementors represent various reference types.

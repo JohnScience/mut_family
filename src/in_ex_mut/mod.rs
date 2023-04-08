@@ -40,12 +40,12 @@ pub trait MutFamily {
     /// The generic associated type (GAT) that allows to wrap types in various interior mutability
     /// wrappers, if wrap at all.
     type Target<T>;
-    /// The generic associated type (GAT) that allows to constuct types of references
-    /// (e.g. `&'a Cell<T>` or `&'a mut T`) that allow mutation of the wrapped value.
-    type RefAllowingMutationUnsafely<'a, T>: ArbMutRef<'a, Self::Target<T>>
-    where
-        T: 'a,
-        Self::Target<T>: 'a;
+    /// The type with a generic associated type (GAT) that allows to constuct types of references
+    /// (e.g. `&'a Cell<T>` or `&'a mut T`) that allow mutation of the wrapped value unsafely.
+    ///
+    /// In the absence of associated type aliases, this type is most commonly used this way:
+    /// `<Self::RefMutFamilyAllowingMutationUnsafely as RefMutFamily>::Target<'a, Self::Target<T>>`.
+    type RefMutFamilyAllowingMutationUnsafely: RefMutFamily;
     /// Constructs a new instance of the parameterized type-wrapper.
     fn new<T>(value: T) -> Self::Target<T>;
     /// Unwraps the instance of the parameterized type-wrapper.
@@ -55,7 +55,12 @@ pub trait MutFamily {
     fn get_mut<'a, T>(mut_ref: &'a mut Self::Target<T>) -> &'a mut T;
     /// Returns a mutable raw pointer to the wrapped value. Check the safety requirements of the
     /// implementors.
-    fn as_ptr<'a, T>(ref_: Self::RefAllowingMutationUnsafely<'a, T>) -> *mut T;
+    fn as_ptr<'a, T>(
+        ref_: <Self::RefMutFamilyAllowingMutationUnsafely as RefMutFamily>::Target<
+            'a,
+            Self::Target<T>,
+        >,
+    ) -> *mut T;
 }
 
 /// The trait whose implementors represent various interior mutability wrappers that allow
@@ -90,21 +95,22 @@ pub trait CloneInner: CloneCopyableInner {
 /// implementor should specify whether the reference has to be shared or mutable by providing
 /// the corresponding [`Set::RefMutFamilyAllowingMutation`] associated type.
 pub trait Set: MutFamily {
+    /// The type with a generic associated type (GAT) that allows to constuct types of references
+    /// (e.g. `&'a Cell<T>` or `&'a mut T`) that allow mutation of the wrapped value safely.
+    ///
+    /// In the absence of associated type aliases, this type is most commonly used this way:
+    /// `<Self::RefMutFamilyAllowingMutation as RefMutFamily>::Target<'a, Self::Target<T>>`.
     type RefMutFamilyAllowingMutation: RefMutFamily;
+    /// Sets the wrapped value to the specified one.
     fn set<'a, T>(
-        ref_: <Self::RefMutFamilyAllowingMutation as RefMutFamily>::Target<
-            'a,
-            Self::Target<T>,
-        >,
+        ref_: <Self::RefMutFamilyAllowingMutation as RefMutFamily>::Target<'a, Self::Target<T>>,
         value: T,
     );
 }
 
 impl MutFamily for IdentityFamily {
     type Target<T> = T;
-    type RefAllowingMutationUnsafely<'a, T> = &'a mut T
-    where
-        T: 'a;
+    type RefMutFamilyAllowingMutationUnsafely = MutRefFamily;
 
     fn new<T>(value: T) -> T {
         value
@@ -126,9 +132,7 @@ impl MutFamily for IdentityFamily {
 impl MutFamily for UnsafeCellFamily {
     type Target<T> = core::cell::UnsafeCell<T>;
 
-    type RefAllowingMutationUnsafely<'a, T> = &'a core::cell::UnsafeCell<T>
-    where
-        T: 'a;
+    type RefMutFamilyAllowingMutationUnsafely = SharedRefFamily;
 
     fn new<T>(value: T) -> Self::Target<T> {
         core::cell::UnsafeCell::new(value)
@@ -149,9 +153,7 @@ impl MutFamily for UnsafeCellFamily {
 
 impl MutFamily for CellFamily {
     type Target<T> = core::cell::Cell<T>;
-    type RefAllowingMutationUnsafely<'a, T> = &'a core::cell::Cell<T>
-    where
-        T: 'a;
+    type RefMutFamilyAllowingMutationUnsafely = SharedRefFamily;
 
     fn new<T>(value: T) -> Self::Target<T> {
         core::cell::Cell::new(value)
@@ -172,9 +174,7 @@ impl MutFamily for CellFamily {
 
 impl MutFamily for RefCellFamily {
     type Target<T> = core::cell::RefCell<T>;
-    type RefAllowingMutationUnsafely<'a, T> = &'a core::cell::RefCell<T>
-    where
-        T: 'a;
+    type RefMutFamilyAllowingMutationUnsafely = SharedRefFamily;
 
     fn new<T>(value: T) -> Self::Target<T> {
         core::cell::RefCell::new(value)
