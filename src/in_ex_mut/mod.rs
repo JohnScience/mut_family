@@ -70,6 +70,10 @@ pub trait MutFamily {
 /// only if the type is [`Copy`].
 pub trait CloneCopyableInner: MutFamily {
     /// Returns a copy of the wrapped value.
+    /// 
+    /// # Panics
+    /// 
+    /// May panic for some implementors, notably [`RefCellFamily`].
     fn clone_copyable_inner<T>(ref_: &Self::Target<T>) -> T
     where
         T: Clone + Copy;
@@ -85,6 +89,10 @@ pub trait CloneCopyableInner: MutFamily {
 /// regardless of whether the type is [`Copy`].
 pub trait CloneInner: CloneCopyableInner {
     /// Returns a clone of the wrapped value.
+    /// 
+    /// # Panics
+    /// 
+    /// May panic for some implementors, notably [`RefCellFamily`].
     fn clone_inner<T>(ref_: &Self::Target<T>) -> T
     where
         T: Clone;
@@ -102,6 +110,10 @@ pub trait Set: MutFamily {
     /// `<Self::RefMutFamilyAllowingMutation as RefMutFamily>::Target<'a, Self::Target<T>>`.
     type RefMutFamilyAllowingMutation: RefMutFamily;
     /// Sets the wrapped value to the specified one.
+    /// 
+    /// # Panics
+    /// 
+    /// May panic for some implementors, notably [`RefCellFamily`].
     fn set<T>(
         ref_: <Self::RefMutFamilyAllowingMutation as RefMutFamily>::Target<'_, Self::Target<T>>,
         value: T,
