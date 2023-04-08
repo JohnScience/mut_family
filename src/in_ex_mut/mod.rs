@@ -52,12 +52,12 @@ pub trait MutFamily {
     fn into_inner<T>(target: Self::Target<T>) -> T;
     /// Returns a mutable reference to the wrapped value.
     // TODO: consider how to better support OnceCell
-    fn get_mut<'a, T>(mut_ref: &'a mut Self::Target<T>) -> &'a mut T;
+    fn get_mut<T>(mut_ref: &mut Self::Target<T>) -> &mut T;
     /// Returns a mutable raw pointer to the wrapped value. Check the safety requirements of the
     /// implementors.
-    fn as_ptr<'a, T>(
+    fn as_ptr<T>(
         ref_: <Self::RefMutFamilyAllowingMutationUnsafely as RefMutFamily>::Target<
-            'a,
+            '_,
             Self::Target<T>,
         >,
     ) -> *mut T;
@@ -70,7 +70,7 @@ pub trait MutFamily {
 /// only if the type is [`Copy`].
 pub trait CloneCopyableInner: MutFamily {
     /// Returns a copy of the wrapped value.
-    fn clone_copyable_inner<'a, T>(ref_: &'a Self::Target<T>) -> T
+    fn clone_copyable_inner<T>(ref_: &Self::Target<T>) -> T
     where
         T: Clone + Copy;
 }
@@ -85,7 +85,7 @@ pub trait CloneCopyableInner: MutFamily {
 /// regardless of whether the type is [`Copy`].
 pub trait CloneInner: CloneCopyableInner {
     /// Returns a clone of the wrapped value.
-    fn clone_inner<'a, T>(ref_: &'a Self::Target<T>) -> T
+    fn clone_inner<T>(ref_: &Self::Target<T>) -> T
     where
         T: Clone;
 }
@@ -102,8 +102,8 @@ pub trait Set: MutFamily {
     /// `<Self::RefMutFamilyAllowingMutation as RefMutFamily>::Target<'a, Self::Target<T>>`.
     type RefMutFamilyAllowingMutation: RefMutFamily;
     /// Sets the wrapped value to the specified one.
-    fn set<'a, T>(
-        ref_: <Self::RefMutFamilyAllowingMutation as RefMutFamily>::Target<'a, Self::Target<T>>,
+    fn set<T>(
+        ref_: <Self::RefMutFamilyAllowingMutation as RefMutFamily>::Target<'_, Self::Target<T>>,
         value: T,
     );
 }
@@ -120,11 +120,11 @@ impl MutFamily for IdentityFamily {
         target
     }
 
-    fn as_ptr<'a, T>(ref_: &'a mut T) -> *mut T {
+    fn as_ptr<T>(ref_: &mut T) -> *mut T {
         ref_ as *mut T
     }
 
-    fn get_mut<'a, T>(mut_ref: &'a mut T) -> &'a mut T {
+    fn get_mut<T>(mut_ref: &mut T) -> &mut T {
         mut_ref
     }
 }
@@ -142,11 +142,11 @@ impl MutFamily for UnsafeCellFamily {
         target.into_inner()
     }
 
-    fn as_ptr<'a, T>(ref_: &'a core::cell::UnsafeCell<T>) -> *mut T {
+    fn as_ptr<T>(ref_: &core::cell::UnsafeCell<T>) -> *mut T {
         ref_.get()
     }
 
-    fn get_mut<'a, T>(mut_ref: &'a mut core::cell::UnsafeCell<T>) -> &'a mut T {
+    fn get_mut<T>(mut_ref: &mut core::cell::UnsafeCell<T>) -> &mut T {
         mut_ref.get_mut()
     }
 }
@@ -163,11 +163,11 @@ impl MutFamily for CellFamily {
         target.into_inner()
     }
 
-    fn as_ptr<'a, T>(ref_: &'a core::cell::Cell<T>) -> *mut T {
+    fn as_ptr<T>(ref_: &core::cell::Cell<T>) -> *mut T {
         ref_.as_ptr()
     }
 
-    fn get_mut<'a, T>(mut_ref: &'a mut Self::Target<T>) -> &'a mut T {
+    fn get_mut<T>(mut_ref: &mut Self::Target<T>) -> &mut T {
         mut_ref.get_mut()
     }
 }
@@ -184,26 +184,26 @@ impl MutFamily for RefCellFamily {
         target.into_inner()
     }
 
-    fn as_ptr<'a, T>(ref_: &'a core::cell::RefCell<T>) -> *mut T {
+    fn as_ptr<T>(ref_: &core::cell::RefCell<T>) -> *mut T {
         ref_.as_ptr()
     }
 
-    fn get_mut<'a, T>(mut_ref: &'a mut core::cell::RefCell<T>) -> &'a mut T {
+    fn get_mut<T>(mut_ref: &mut core::cell::RefCell<T>) -> &mut T {
         mut_ref.get_mut()
     }
 }
 
 impl CloneCopyableInner for IdentityFamily {
-    fn clone_copyable_inner<'a, T>(ref_: &'a T) -> T
+    fn clone_copyable_inner<T>(ref_: &T) -> T
     where
         T: Clone + Copy,
     {
-        ref_.clone()
+        *ref_
     }
 }
 
 impl CloneCopyableInner for CellFamily {
-    fn clone_copyable_inner<'a, T>(ref_: &'a core::cell::Cell<T>) -> T
+    fn clone_copyable_inner<T>(ref_: &core::cell::Cell<T>) -> T
     where
         T: Clone + Copy,
     {
@@ -212,16 +212,16 @@ impl CloneCopyableInner for CellFamily {
 }
 
 impl CloneCopyableInner for RefCellFamily {
-    fn clone_copyable_inner<'a, T>(ref_: &'a core::cell::RefCell<T>) -> T
+    fn clone_copyable_inner<T>(ref_: &core::cell::RefCell<T>) -> T
     where
         T: Clone + Copy,
     {
-        ref_.borrow().clone()
+        *ref_.borrow()
     }
 }
 
 impl CloneInner for IdentityFamily {
-    fn clone_inner<'a, T>(ref_: &'a T) -> T
+    fn clone_inner<T>(ref_: &T) -> T
     where
         T: Clone,
     {
@@ -230,7 +230,7 @@ impl CloneInner for IdentityFamily {
 }
 
 impl CloneInner for RefCellFamily {
-    fn clone_inner<'a, T>(ref_: &'a core::cell::RefCell<T>) -> T
+    fn clone_inner<T>(ref_: &core::cell::RefCell<T>) -> T
     where
         T: Clone,
     {
@@ -240,21 +240,21 @@ impl CloneInner for RefCellFamily {
 
 impl Set for IdentityFamily {
     type RefMutFamilyAllowingMutation = MutRefFamily;
-    fn set<'a, T>(ref_: &'a mut T, value: T) {
+    fn set<T>(ref_: &mut T, value: T) {
         *ref_ = value;
     }
 }
 
 impl Set for CellFamily {
     type RefMutFamilyAllowingMutation = SharedRefFamily;
-    fn set<'a, T>(ref_: &'a core::cell::Cell<T>, value: T) {
+    fn set<T>(ref_: &core::cell::Cell<T>, value: T) {
         ref_.set(value);
     }
 }
 
 impl Set for RefCellFamily {
     type RefMutFamilyAllowingMutation = SharedRefFamily;
-    fn set<'a, T>(ref_: &'a core::cell::RefCell<T>, value: T) {
+    fn set<T>(ref_: &core::cell::RefCell<T>, value: T) {
         *ref_.borrow_mut() = value;
     }
 }
