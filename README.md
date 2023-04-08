@@ -7,7 +7,7 @@
 [![Dependency Status](https://deps.rs/repo/github/JohnScience/mut_family/status.svg)][`mut_family`/dep_status]
 
 A [GAT]-based library for writing code that is [generic] over
-[interior/exterior mutability].
+[interior/exterior mutability] and reference of arbitrary mutability.
 
 ## SemVer Policy
 
