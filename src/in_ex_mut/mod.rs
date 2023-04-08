@@ -56,7 +56,7 @@ pub trait MutFamily {
     /// Returns a mutable raw pointer to the wrapped value. Check the safety requirements of the
     /// implementors.
     fn as_ptr<T>(
-        ref_: <Self::RefMutFamilyAllowingMutationUnsafely as RefMutFamily>::Target<
+        ref_: <Self::RefMutFamilyAllowingMutationUnsafely as RefMutFamily>::Ref<
             '_,
             Self::Target<T>,
         >,
@@ -115,7 +115,7 @@ pub trait Set: MutFamily {
     /// 
     /// May panic for some implementors, notably [`RefCellFamily`].
     fn set<T>(
-        ref_: <Self::RefMutFamilyAllowingMutation as RefMutFamily>::Target<'_, Self::Target<T>>,
+        ref_: <Self::RefMutFamilyAllowingMutation as RefMutFamily>::Ref<'_, Self::Target<T>>,
         value: T,
     );
 }

@@ -12,29 +12,30 @@ pub trait RefMutFamily: Sized {
     /// The generic associated type ([GAT]) that allows to constuct types of references
     ///
     /// [GAT]: https://blog.rust-lang.org/2022/10/28/gats-stabilization.html#what-are-gats
-    type Target<'a, T>: Ref<'a, T, Self, Pointee = T, RefMutFamily = Self>
+    type Ref<'a, T>: Ref<'a, T, Self, Pointee = T, RefMutFamily = Self>
     where
         T: 'a;
 }
 
 #[sealed]
 impl RefMutFamily for SharedRefFamily {
-    type Target<'a,T> = &'a T
+    type Ref<'a,T> = &'a T
     where
         T: 'a;
 }
 
 #[sealed]
 impl RefMutFamily for MutRefFamily {
-    type Target<'a,T> = &'a mut T
+    type Ref<'a,T> = &'a mut T
     where
         T: 'a;
 }
 
 /// The trait whose implementors represent any of the two reference types.
-pub trait Ref<'a, T, M>
+pub trait Ref<'a, T, M>: From<M::Ref<'a, T>> + Into<M::Ref<'a, T>>
 where
     M: RefMutFamily,
+    T: 'a,
 {
     /// The type that the reference points to.
     type Pointee;
@@ -46,24 +47,20 @@ where
     fn as_ref(&self) -> &T;
 }
 
-impl<'a, T, M> Ref<'a, T, M> for &'a T
-where
-    M: RefMutFamily,
+impl<'a, T> Ref<'a, T, SharedRefFamily> for &'a T
 {
     type Pointee = T;
-    type RefMutFamily = M;
+    type RefMutFamily = SharedRefFamily;
 
     fn as_ref(&self) -> &T {
         self
     }
 }
 
-impl<'a, T, M> Ref<'a, T, M> for &'a mut T
-where
-    M: RefMutFamily,
+impl<'a, T> Ref<'a, T, MutRefFamily> for &'a mut T
 {
     type Pointee = T;
-    type RefMutFamily = M;
+    type RefMutFamily = MutRefFamily;
 
     fn as_ref(&self) -> &T {
         self
