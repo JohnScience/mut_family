@@ -7,9 +7,9 @@ pub struct MutRefFamily;
 
 /// The trait whose two implementors represent either mutability ([`MutRefFamily`])
 /// or sharedness ([`SharedRefFamily`]) of references.
-/// 
+///
 /// # Safety
-/// 
+///
 /// const [`RefMutFamily::IS_SHARED`] must be correct.
 #[sealed]
 pub unsafe trait RefMutFamily: Sized {
@@ -27,7 +27,7 @@ pub unsafe trait RefMutFamily: Sized {
         F: FnOnce(&mut Self::Ref<'_, T>) -> O,
         T: 'static;
 
-    fn as_ref<T,F,R>(ref_: &mut Self::Ref<'_, T>, f: F) -> R
+    fn as_ref<T, F, R>(ref_: &mut Self::Ref<'_, T>, f: F) -> R
     where
         F: FnOnce(&mut Self::Ref<'_, T>) -> R,
         T: 'static,
@@ -62,19 +62,35 @@ where
     fn into_someref(self) -> SomeRef<'a, T, M>;
 }
 
-impl<'a,T> SomeRef<'a,T, SharedRefFamily> {
-    pub fn from_shared(shared: &'a T) -> Self {
-        Self {
-            shared,
+impl<'a, T, M> SomeRef<'a, T, M>
+where
+    M: RefMutFamily,
+{
+    pub fn map<U, Fref, Fmut>(self, f_ref: Fref, f_mut: Fmut) -> SomeRef<'a, U, M>
+    where
+        Fref: FnOnce(&'a T) -> &'a U,
+        Fmut: FnOnce(&'a mut T) -> &'a mut U,
+        U: 'a,
+    {
+        if M::IS_SHARED {
+            let shared_sr = SomeRef::from_shared(f_ref(unsafe { self.shared }));
+            unsafe { core::mem::transmute(shared_sr) }
+        } else {
+            let mut_sr = SomeRef::from_mut(f_mut(unsafe { &mut *self.mut_ }));
+            unsafe { core::mem::transmute(mut_sr) }
         }
     }
 }
 
-impl<'a,T> SomeRef<'a,T, MutRefFamily> {
+impl<'a, T> SomeRef<'a, T, SharedRefFamily> {
+    pub fn from_shared(shared: &'a T) -> Self {
+        Self { shared }
+    }
+}
+
+impl<'a, T> SomeRef<'a, T, MutRefFamily> {
     pub fn from_mut(mut_: &'a mut T) -> Self {
-        Self {
-            mut_,
-        }
+        Self { mut_ }
     }
 }
 
@@ -94,7 +110,7 @@ unsafe impl RefMutFamily for SharedRefFamily {
         f(ref_)
     }
 
-    fn as_ref<T,F,R>(ref_: &mut &T, f: F) -> R
+    fn as_ref<T, F, R>(ref_: &mut &T, f: F) -> R
     where
         F: FnOnce(&mut &T) -> R,
         T: 'static,
@@ -120,7 +136,7 @@ unsafe impl RefMutFamily for MutRefFamily {
         f(ref_)
     }
 
-    fn as_ref<T,F,R>(ref_: &mut &mut T, f: F) -> R
+    fn as_ref<T, F, R>(ref_: &mut &mut T, f: F) -> R
     where
         F: FnOnce(&mut &mut T) -> R,
         T: 'static,
@@ -131,19 +147,18 @@ unsafe impl RefMutFamily for MutRefFamily {
 }
 
 #[sealed]
-impl<'a,T,M> Ref<'a,T,M> for SomeRef<'a,T,M>
+impl<'a, T, M> Ref<'a, T, M> for SomeRef<'a, T, M>
 where
     M: RefMutFamily,
 {
-    
     type Pointee = T;
     type RefMutFamily = M;
 
     fn as_ref(&self) -> &T {
         if M::IS_SHARED {
-            unsafe { &self.shared }
+            unsafe { self.shared }
         } else {
-            unsafe { &self.mut_ }
+            unsafe { self.mut_ }
         }
     }
 
@@ -162,9 +177,7 @@ impl<'a, T> Ref<'a, T, SharedRefFamily> for &'a T {
     }
 
     fn into_someref(self) -> SomeRef<'a, T, SharedRefFamily> {
-        SomeRef {
-            shared: self,
-        }
+        SomeRef { shared: self }
     }
 }
 
@@ -178,8 +191,6 @@ impl<'a, T> Ref<'a, T, MutRefFamily> for &'a mut T {
     }
 
     fn into_someref(self) -> SomeRef<'a, T, MutRefFamily> {
-        SomeRef {
-            mut_: self,
-        }
+        SomeRef { mut_: self }
     }
 }
