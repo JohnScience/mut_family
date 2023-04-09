@@ -86,11 +86,19 @@ impl<'a, T> SomeRef<'a, T, SharedRefFamily> {
     pub fn from_shared(shared: &'a T) -> Self {
         Self { shared }
     }
+
+    pub fn into_shared(self) -> &'a T {
+        unsafe { self.shared }
+    }
 }
 
 impl<'a, T> SomeRef<'a, T, MutRefFamily> {
     pub fn from_mut(mut_: &'a mut T) -> Self {
         Self { mut_ }
+    }
+
+    pub fn into_mut(self) -> &'a mut T {
+        unsafe { self.mut_ }
     }
 }
 

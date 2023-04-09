@@ -1,3 +1,5 @@
+use core::cell::{Cell, RefCell, UnsafeCell};
+
 use crate::refs::*;
 
 /// The type that represents the degenerate (nonexistent) mutability wrapper.
@@ -7,21 +9,21 @@ use crate::refs::*;
 /// [here]: https://doc.rust-lang.org/reference/interior-mutability.html
 pub struct IdentityFamily;
 
-/// The type that represents the [`core::cell::UnsafeCell`] interior mutability wrapper.
+/// The type that represents the [`UnsafeCell`] interior mutability wrapper.
 ///
 /// Learn more about interior and exterior mutability [here].
 ///
 /// [here]: https://doc.rust-lang.org/reference/interior-mutability.html
 pub struct UnsafeCellFamily;
 
-/// The type that represents the [`core::cell::Cell`] interior mutability wrapper.
+/// The type that represents the [`Cell`] interior mutability wrapper.
 ///
 /// Learn more about interior and exterior mutability [here].
 ///
 /// [here]: https://doc.rust-lang.org/reference/interior-mutability.html
 pub struct CellFamily;
 
-/// The type that represents the [`core::cell::RefCell`] interior mutability wrapper.
+/// The type that represents the [`RefCell`] interior mutability wrapper.
 ///
 /// Learn more about interior and exterior mutability [here].
 ///
@@ -66,7 +68,7 @@ pub trait MutFamily {
 /// The trait whose implementors represent various interior mutability wrappers that allow
 /// cloning of the wrapped value by shared reference if the type is [`Copy`].
 ///
-/// For example, [`core::cell::Cell`] allows cloning of the wrapped value by shared reference
+/// For example, [`Cell`] allows cloning of the wrapped value by shared reference
 /// only if the type is [`Copy`].
 pub trait CloneCopyableInner: MutFamily {
     /// Returns a copy of the wrapped value.
@@ -85,7 +87,7 @@ pub trait CloneCopyableInner: MutFamily {
 /// Unlike [`CloneCopyableInner`], this trait doesn't require the wrapped type to be [`Copy`]
 /// to allow cloning.
 ///
-/// For example, [`core::cell::RefCell`] allows cloning of the wrapped value by shared reference
+/// For example, [`RefCell`] allows cloning of the wrapped value by shared reference
 /// regardless of whether the type is [`Copy`].
 pub trait CloneInner: CloneCopyableInner {
     /// Returns a clone of the wrapped value.
@@ -118,6 +120,16 @@ pub trait Set: MutFamily {
         ref_: <Self::RefMutFamilyAllowingMutation as RefMutFamily>::Ref<'_, Self::Target<T>>,
         value: T,
     );
+
+    /// Sets the wrapped value to the specified one.
+    ///
+    /// # Panics
+    ///
+    /// May panic for some implementors, notably [`RefCellFamily`].
+    fn set_via_someref<T>(
+        someref: SomeRef<'_, Self::Target<T>, Self::RefMutFamilyAllowingMutation>,
+        value: T,
+    );
 }
 
 impl MutFamily for IdentityFamily {
@@ -142,40 +154,40 @@ impl MutFamily for IdentityFamily {
 }
 
 impl MutFamily for UnsafeCellFamily {
-    type Target<T> = core::cell::UnsafeCell<T>;
+    type Target<T> = UnsafeCell<T>;
 
     type RefMutFamilyAllowingMutationUnsafely = SharedRefFamily;
 
     fn new<T>(value: T) -> Self::Target<T> {
-        core::cell::UnsafeCell::new(value)
+        UnsafeCell::new(value)
     }
 
     fn into_inner<T>(target: Self::Target<T>) -> T {
         target.into_inner()
     }
 
-    fn as_ptr<T>(ref_: &core::cell::UnsafeCell<T>) -> *mut T {
+    fn as_ptr<T>(ref_: &UnsafeCell<T>) -> *mut T {
         ref_.get()
     }
 
-    fn get_mut<T>(mut_ref: &mut core::cell::UnsafeCell<T>) -> &mut T {
+    fn get_mut<T>(mut_ref: &mut UnsafeCell<T>) -> &mut T {
         mut_ref.get_mut()
     }
 }
 
 impl MutFamily for CellFamily {
-    type Target<T> = core::cell::Cell<T>;
+    type Target<T> = Cell<T>;
     type RefMutFamilyAllowingMutationUnsafely = SharedRefFamily;
 
     fn new<T>(value: T) -> Self::Target<T> {
-        core::cell::Cell::new(value)
+        Cell::new(value)
     }
 
     fn into_inner<T>(target: Self::Target<T>) -> T {
         target.into_inner()
     }
 
-    fn as_ptr<T>(ref_: &core::cell::Cell<T>) -> *mut T {
+    fn as_ptr<T>(ref_: &Cell<T>) -> *mut T {
         ref_.as_ptr()
     }
 
@@ -185,22 +197,22 @@ impl MutFamily for CellFamily {
 }
 
 impl MutFamily for RefCellFamily {
-    type Target<T> = core::cell::RefCell<T>;
+    type Target<T> = RefCell<T>;
     type RefMutFamilyAllowingMutationUnsafely = SharedRefFamily;
 
     fn new<T>(value: T) -> Self::Target<T> {
-        core::cell::RefCell::new(value)
+        RefCell::new(value)
     }
 
     fn into_inner<T>(target: Self::Target<T>) -> T {
         target.into_inner()
     }
 
-    fn as_ptr<T>(ref_: &core::cell::RefCell<T>) -> *mut T {
+    fn as_ptr<T>(ref_: &RefCell<T>) -> *mut T {
         ref_.as_ptr()
     }
 
-    fn get_mut<T>(mut_ref: &mut core::cell::RefCell<T>) -> &mut T {
+    fn get_mut<T>(mut_ref: &mut RefCell<T>) -> &mut T {
         mut_ref.get_mut()
     }
 }
@@ -215,7 +227,7 @@ impl CloneCopyableInner for IdentityFamily {
 }
 
 impl CloneCopyableInner for CellFamily {
-    fn clone_copyable_inner<T>(ref_: &core::cell::Cell<T>) -> T
+    fn clone_copyable_inner<T>(ref_: &Cell<T>) -> T
     where
         T: Clone + Copy,
     {
@@ -224,7 +236,7 @@ impl CloneCopyableInner for CellFamily {
 }
 
 impl CloneCopyableInner for RefCellFamily {
-    fn clone_copyable_inner<T>(ref_: &core::cell::RefCell<T>) -> T
+    fn clone_copyable_inner<T>(ref_: &RefCell<T>) -> T
     where
         T: Clone + Copy,
     {
@@ -242,7 +254,7 @@ impl CloneInner for IdentityFamily {
 }
 
 impl CloneInner for RefCellFamily {
-    fn clone_inner<T>(ref_: &core::cell::RefCell<T>) -> T
+    fn clone_inner<T>(ref_: &RefCell<T>) -> T
     where
         T: Clone,
     {
@@ -255,18 +267,39 @@ impl Set for IdentityFamily {
     fn set<T>(ref_: &mut T, value: T) {
         *ref_ = value;
     }
+
+    fn set_via_someref<T>(someref: SomeRef<'_, T, Self::RefMutFamilyAllowingMutation>, value: T) {
+        let mut_ref: &mut T = someref.into_mut();
+        *mut_ref = value;
+    }
 }
 
 impl Set for CellFamily {
     type RefMutFamilyAllowingMutation = SharedRefFamily;
-    fn set<T>(ref_: &core::cell::Cell<T>, value: T) {
+    fn set<T>(ref_: &Cell<T>, value: T) {
+        ref_.set(value);
+    }
+
+    fn set_via_someref<T>(
+        someref: SomeRef<'_, Cell<T>, Self::RefMutFamilyAllowingMutation>,
+        value: T,
+    ) {
+        let ref_: &Cell<T> = someref.into_shared();
         ref_.set(value);
     }
 }
 
 impl Set for RefCellFamily {
     type RefMutFamilyAllowingMutation = SharedRefFamily;
-    fn set<T>(ref_: &core::cell::RefCell<T>, value: T) {
+    fn set<T>(ref_: &RefCell<T>, value: T) {
+        *ref_.borrow_mut() = value;
+    }
+
+    fn set_via_someref<T>(
+        someref: SomeRef<'_, Self::Target<T>, Self::RefMutFamilyAllowingMutation>,
+        value: T,
+    ) {
+        let ref_: &RefCell<T> = someref.into_shared();
         *ref_.borrow_mut() = value;
     }
 }
