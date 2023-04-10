@@ -66,6 +66,30 @@ impl<'a, T, M> SomeRef<'a, T, M>
 where
     M: RefMutFamily,
 {
+    /// The method that returns a concrete shared reference. This is method is needed
+    /// in generic contexts where the return type is expected to be a reference constructed
+    /// from a generic associated type.
+    pub fn into_inner_ref(self) -> M::Ref<'a, T> {
+        // A simple transmute wouldn't do due to the error
+        //
+        // ```text
+        // cannot transmute between types of different sizes, or dependently-sized types
+        // source type: `refs::SomeRef<'_, T, M>` (64 bits)
+        // target type: `<M as refs::RefMutFamily>::Ref<'_, T>` (this type does not have a fixed size)
+        // ```
+        //
+        // even though type `<M as refs::RefMutFamily>::Ref<'_, T>` is required to implement
+        // Ref<'a,T,M>, which is a subtrait of Sized, and thus has a fixed size.
+        //
+        // The suggested alternative is to use `transmute_copy`:
+        // https://github.com/rust-lang/rust/issues/27570#issuecomment-128549606
+
+        debug_assert!(core::mem::size_of::<Self>() == core::mem::size_of::<M::Ref<'a, T>>());
+        let transmuted = unsafe { core::mem::transmute_copy(&self) };
+        core::mem::forget(self);
+        transmuted
+    }
+
     pub fn map<U, Fref, Fmut>(self, f_ref: Fref, f_mut: Fmut) -> SomeRef<'a, U, M>
     where
         Fref: FnOnce(&'a T) -> &'a U,
