@@ -85,9 +85,11 @@ where
         // https://github.com/rust-lang/rust/issues/27570#issuecomment-128549606
 
         debug_assert!(core::mem::size_of::<Self>() == core::mem::size_of::<M::Ref<'a, T>>());
-        let transmuted = unsafe { core::mem::transmute_copy(&self) };
-        core::mem::forget(self);
-        transmuted
+        // Self doesn't implement Drop, so core::mem::forget(self) is equivalent to core::mem::drop(self).
+        // Since Self doesn't implement Drop, dropping such a type only extends its contained lifetimes.
+        //
+        // The following code is safe because SomeRef is a union of shared a mut references.
+        unsafe { core::mem::transmute_copy(&self) }
     }
 
     pub fn map<U, Fref, Fmut>(self, f_ref: Fref, f_mut: Fmut) -> SomeRef<'a, U, M>
