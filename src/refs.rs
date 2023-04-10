@@ -71,13 +71,30 @@ where
         Fref: FnOnce(&'a T) -> &'a U,
         Fmut: FnOnce(&'a mut T) -> &'a mut U,
         U: 'a,
+        M: 'a,
+    {
+        self.convert(
+            |this| {
+                let shared_sr = SomeRef::from_shared(f_ref(this));
+                unsafe { core::mem::transmute(shared_sr) }
+            },
+            |this| {
+                let mut_sr = SomeRef::from_mut(f_mut(this));
+                unsafe { core::mem::transmute(mut_sr) }
+            },
+        )
+    }
+
+    pub fn convert<O, Fref, Fmut>(self, f_ref: Fref, f_mut: Fmut) -> O
+    where
+        Fref: FnOnce(&'a T) -> O,
+        Fmut: FnOnce(&'a mut T) -> O,
+        O: 'a,
     {
         if M::IS_SHARED {
-            let shared_sr = SomeRef::from_shared(f_ref(unsafe { self.shared }));
-            unsafe { core::mem::transmute(shared_sr) }
+            f_ref(unsafe { self.shared })
         } else {
-            let mut_sr = SomeRef::from_mut(f_mut(unsafe { &mut *self.mut_ }));
-            unsafe { core::mem::transmute(mut_sr) }
+            f_mut(unsafe { &mut *self.mut_ })
         }
     }
 }
