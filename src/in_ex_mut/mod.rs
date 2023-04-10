@@ -70,13 +70,13 @@ pub trait MutFamily {
 ///
 /// For example, [`Cell`] allows cloning of the wrapped value by shared reference
 /// only if the type is [`Copy`].
-pub trait CloneCopyableInner: MutFamily {
+pub trait CopyInner: MutFamily {
     /// Returns a copy of the wrapped value.
     ///
     /// # Panics
     ///
     /// May panic for some implementors, notably [`RefCellFamily`].
-    fn clone_copyable_inner<T>(ref_: &Self::Target<T>) -> T
+    fn copy_inner<T>(ref_: &Self::Target<T>) -> T
     where
         T: Clone + Copy;
 }
@@ -89,7 +89,7 @@ pub trait CloneCopyableInner: MutFamily {
 ///
 /// For example, [`RefCell`] allows cloning of the wrapped value by shared reference
 /// regardless of whether the type is [`Copy`].
-pub trait CloneInner: CloneCopyableInner {
+pub trait CloneInner: CopyInner {
     /// Returns a clone of the wrapped value.
     ///
     /// # Panics
@@ -217,8 +217,8 @@ impl MutFamily for RefCellFamily {
     }
 }
 
-impl CloneCopyableInner for IdentityFamily {
-    fn clone_copyable_inner<T>(ref_: &T) -> T
+impl CopyInner for IdentityFamily {
+    fn copy_inner<T>(ref_: &T) -> T
     where
         T: Clone + Copy,
     {
@@ -226,8 +226,8 @@ impl CloneCopyableInner for IdentityFamily {
     }
 }
 
-impl CloneCopyableInner for CellFamily {
-    fn clone_copyable_inner<T>(ref_: &Cell<T>) -> T
+impl CopyInner for CellFamily {
+    fn copy_inner<T>(ref_: &Cell<T>) -> T
     where
         T: Clone + Copy,
     {
@@ -235,8 +235,8 @@ impl CloneCopyableInner for CellFamily {
     }
 }
 
-impl CloneCopyableInner for RefCellFamily {
-    fn clone_copyable_inner<T>(ref_: &RefCell<T>) -> T
+impl CopyInner for RefCellFamily {
+    fn copy_inner<T>(ref_: &RefCell<T>) -> T
     where
         T: Clone + Copy,
     {
