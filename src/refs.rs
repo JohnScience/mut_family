@@ -59,6 +59,8 @@ where
     /// in generic context.
     fn as_ref(&self) -> &T;
 
+    /// The method that returns a generic SomeRef wrapper around the reference.
+    /// The instances of that type can be useful in generic context.
     fn into_someref(self) -> SomeRef<'a, T, M>;
 }
 
