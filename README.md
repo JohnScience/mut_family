@@ -12,7 +12,7 @@ A [GAT]-based library for writing code that is [generic] over
 ## SemVer Policy
 
 At the moment, there's no any semver guarantees. The crate may undergo breaking changes.
-However, you stil can use it in your project if you select a specific version,
+However, you still can use it in your project if you select a specific version,
 your crate is an application, and your upstream crates do not use [`mut_family`].
 
 ## License
