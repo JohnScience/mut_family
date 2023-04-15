@@ -62,6 +62,37 @@ where
     /// The method that returns a generic SomeRef wrapper around the reference.
     /// The instances of that type can be useful in generic context.
     fn into_someref(self) -> SomeRef<'a, T, M>;
+
+    /// The method that returns a generic SomeRef wrapper around the reference
+    /// with the specified mutability of the reference.
+    /// 
+    /// This method is needed with `SomeRef::convert` to unify the mutability of
+    /// the references on two paths when the `self` argument in `SomeRef::convert` is
+    /// of the same mutability as the results in the output of `SomeRef::convert`.
+    unsafe fn into_someref_with_unchecked_mf<MF>(self) -> SomeRef<'a, T, MF>
+    where
+        MF: RefMutFamily
+    {
+        // A simple transmute wouldn't do due to the error
+        //
+        // ```text
+        // cannot transmute between types of different sizes, or dependently-sized types
+        // source type: `refs::SomeRef<'_, T, M>` (64 bits)
+        // target type: `<M as refs::RefMutFamily>::Ref<'_, T>` (this type does not have a fixed size)
+        // ```
+        //
+        // even though type `<M as refs::RefMutFamily>::Ref<'_, T>` is required to implement
+        // Ref<'a,T,M>, which is a subtrait of Sized, and thus has a fixed size.
+        //
+        // The suggested alternative is to use `transmute_copy`:
+        // https://github.com/rust-lang/rust/issues/27570#issuecomment-128549606
+
+        debug_assert!(core::mem::size_of::<Self>() == core::mem::size_of::<SomeRef<'a, T, MF>>());
+        debug_assert!(core::mem::align_of::<Self>() == core::mem::align_of::<SomeRef<'a, T, MF>>());
+        // Self doesn't implement Drop, so core::mem::forget(self) is equivalent to core::mem::drop(self).
+        // Since Self doesn't implement Drop, dropping such a type only extends its contained lifetimes.
+        core::mem::transmute_copy(&self)
+    }
 }
 
 impl<'a, T, M> SomeRef<'a, T, M>
@@ -87,6 +118,7 @@ where
         // https://github.com/rust-lang/rust/issues/27570#issuecomment-128549606
 
         debug_assert!(core::mem::size_of::<Self>() == core::mem::size_of::<M::Ref<'a, T>>());
+        debug_assert!(core::mem::align_of::<Self>() == core::mem::align_of::<M::Ref<'a, T>>());
         // Self doesn't implement Drop, so core::mem::forget(self) is equivalent to core::mem::drop(self).
         // Since Self doesn't implement Drop, dropping such a type only extends its contained lifetimes.
         //
@@ -113,6 +145,8 @@ where
         )
     }
 
+    // TODO: once variadic generics are implemented, there should be a variadic
+    // version of this method.
     pub fn convert<O, Fref, Fmut>(self, f_ref: Fref, f_mut: Fmut) -> O
     where
         Fref: FnOnce(&'a T) -> O,
