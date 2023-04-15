@@ -49,6 +49,7 @@ pub trait Ref<'a, T, M>: Sized
 where
     M: RefMutFamily,
     T: 'a,
+    Self: 'a,
 {
     /// The type that the reference points to.
     type Pointee;
@@ -236,7 +237,7 @@ unsafe impl RefMutFamily for MutRefFamily {
 #[sealed]
 impl<'a, T, M> Ref<'a, T, M> for SomeRef<'a, T, M>
 where
-    M: RefMutFamily,
+    M: RefMutFamily + 'a,
 {
     type Pointee = T;
     type RefMutFamily = M;
