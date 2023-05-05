@@ -17,7 +17,7 @@ your crate is an application, and your upstream crates do not use [`mut_family`]
 
 ## Warning
 
-The author currently believes that without proper support for [`mut`](https://doc.rust-lang.org/std/keyword.mut.html)-genericity for references as a part of the overarching [keyword generics](https://doc.rust-lang.org/std/keyword.mut.html) initiative, writing the code that is generic over interior/exterior mutability is complicated to the point of unreasonableness. For example, currently it's impossible to avoid code-duplication related to destructuring.
+The author currently believes that without proper support for [`mut`](https://doc.rust-lang.org/std/keyword.mut.html)-genericity for references as a part of the overarching [keyword generics](https://doc.rust-lang.org/std/keyword.mut.html) initiative, writing the code that is generic over interior/exterior mutability is complicated to the point of unreasonableness. For example, currently it's impossible to avoid code-duplication related to destructuring. Fundamentally, the problem is the absence of [variadic generics](https://github.com/rust-lang/rust/issues/10124).
 
 ```rust
 struct MyStruct {
