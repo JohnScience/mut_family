@@ -17,7 +17,26 @@ your crate is an application, and your upstream crates do not use [`mut_family`]
 
 ## Warning
 
-The author currently believes that without proper support for [`mut`](https://doc.rust-lang.org/std/keyword.mut.html)-genericity for references as a part of the overarching [keyword generics](https://doc.rust-lang.org/std/keyword.mut.html) initiative, writing the code that is generic over interior/exterior mutability is complicated to the point of unreasonableness.
+The author currently believes that without proper support for [`mut`](https://doc.rust-lang.org/std/keyword.mut.html)-genericity for references as a part of the overarching [keyword generics](https://doc.rust-lang.org/std/keyword.mut.html) initiative, writing the code that is generic over interior/exterior mutability is complicated to the point of unreasonableness. For example, currently it's impossible to avoid code-duplication related to destructuring.
+
+```rust
+struct MyStruct {
+    x: usize,
+    y: usize,
+}
+
+fn main() {
+    let a = MyStruct { x: 0, y: 0 };
+    let mut b = MyStruct { x: 0, y: 0 };
+    
+    // There is no trait for destructuring because it would require
+    // variadic generics
+    let MyStruct { x: x_ref, y: y_ref } = &a;
+    let MyStruct { x: x_mut, y: y_mut } = &mut b;
+}
+```
+
+[*Rust playground*](https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=3b9a171dd389fe1654a1974accd2495e)
 
 ## License
 
