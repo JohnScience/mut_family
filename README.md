@@ -15,6 +15,10 @@ At the moment, there's no any semver guarantees. The crate may undergo breaking 
 However, you still can use it in your project if you select a specific version,
 your crate is an application, and your upstream crates do not use [`mut_family`].
 
+## Warning
+
+The author currently believes that without proper support for [`mut`](https://doc.rust-lang.org/std/keyword.mut.html)-genericity for references as a part of the overarching [keyword generics](https://doc.rust-lang.org/std/keyword.mut.html) initiative, writing the code that is generic over interior/exterior mutability is complicated to the point of unreasonableness.
+
 ## License
 
 <sup>
