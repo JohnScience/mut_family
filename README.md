@@ -38,6 +38,8 @@ fn main() {
 
 [*Rust playground*](https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=3b9a171dd389fe1654a1974accd2495e)
 
+Potentially, it'll be easier to do with something like [either::for_both](https://docs.rs/either/1.8.1/either/macro.for_both.html).
+
 ## License
 
 <sup>
